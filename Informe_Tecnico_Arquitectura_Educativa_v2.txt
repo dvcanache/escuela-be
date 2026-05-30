@@ -1,0 +1,466 @@
+Informe Técnico de Desarrollo y
+Arquitectura
+Proyecto: Plataforma de Gestión Educativa Institucional
+Arquitectura: Java Spring Boot & MySQL (Monolito Modular)
+Versión: 2.0 Fecha: 29 de mayo de 2026
+
+1. Objetivo del Documento
+El presente informe técnico detalla las especificaciones operativas, la arquitectura de
+software, la estructuración modular, el esquema conceptual de base de datos y la hoja
+de ruta cronológica para la construcción del Producto Mínimo Viable (MVP) de la
+Plataforma de Gestión Educativa Institucional. Diseñado para una audiencia técnica y
+gerencial, este documento describe de forma exhaustiva todos los pasos de ingeniería
+de software sin emplear bloques de código de programación, garantizando claridad en
+los procesos de negocio y flujos relacionales.
+
+2. Arquitectura de Software y Pila Tecnológica
+Para asegurar un desarrollo escalable, un control riguroso de accesos y una óptima
+mantenibilidad, el ecosistema se ha diseñado bajo un patrón de Monolito Modular
+(Modular Monolith). Este enfoque permite compilar y desplegar la aplicación como una
+sola unidad en las fases iniciales, pero manteniendo un aislamiento estricto por
+componentes (dominios), lo cual simplifica una futura transición hacia Microservicios
+independientes.
+
+Pila Tecnológica Establecida
+• Entorno de Ejecución Backend: Java (versión 17 o superior) para proveer un entorno
+robusto, tipado y de alta disponibilidad.
+• Framework Empresarial: Spring Boot (versión 3.x) para la inyección de dependencias,
+automatización de configuraciones y ciclo de vida de los servicios.
+• Persistencia de Datos: MySQL como motor relacional primario, interactuando mediante
+Spring Data JPA (Hibernate) para un modelado relacional estructurado.
+• Seguridad y Control: Spring Security integrado con tokens de autenticación JWT
+(JSON Web Tokens) de naturaleza sin estado (stateless).
+• Clientes Consumidores: El backend expondrá interfaces API REST unificadas para el
+consumo interactivo de un Portal Web en Angular (para Profesores y Administradores) y
+una Aplicación Móvil en Flutter (para Estudiantes y Padres).
+
+3. Desglose Conceptual de Módulos (Dominios Base)
+El monolito se fracciona internamente en módulos funcionales aislados, donde cada uno
+resuelve un dominio de negocio específico:
+Dominio / Área
+Módulo de Seguridad y API
+Gateway
+
+Nombre Técnico
+security-module
+
+Configuración Marca Blanca
+
+tenant-module
+
+Servicio de Horarios
+
+schedule-module
+
+Servicio de Asistencia
+
+attendance-module
+
+Servicio de Control de
+Acceso
+
+access-control-module
+
+Servicio de Notificaciones
+
+notification-module
+
+Responsabilidad Central
+Intercepta todas las
+solicitudes entrantes,
+gestiona la emisión y
+validación de tokens JWT, y
+restringe el acceso según
+cuatro perfiles estrictos:
+Administrador, Profesor,
+Estudiante y Padre.
+Soporte Multi-Inquilino (MultiTenant). Provee aislamiento
+lógico de datos a nivel de fila
+para que múltiples escuelas
+operen en la misma
+infraestructura con
+personalización visual e
+institucional.
+Administra la asignación de
+aulas, bloques de tiempo
+académico, cancelación de
+clases de último minuto y
+asignación automática de
+horas libres.
+Gestión académica vinculada
+a los horarios que permite
+registrar inasistencias,
+retardos o presencialidad de
+los estudiantes.
+Capa de integración física
+diseñada para recibir y
+procesar datos en tiempo real
+provenientes de hardware
+externo (torniquetes y
+escáneres en los accesos).
+Bus de comunicación que
+automatiza alertas de
+eventos y emergencias.
+Emplea un Servidor SMTP
+para correos y la API de
+WhatsApp Business para
+mensajería móvil.
+
+4. Organización Lógica del Proyecto (Enfoque DDD)
+Para prevenir el acoplamiento directo y asegurar la modularidad, las carpetas y
+paquetes del código fuente siguen los principios del Diseño Orientado al Dominio
+(DDD):
+1. Capa Global / Core: Aloja configuraciones de infraestructura transversales (base de
+datos, seguridad global) y el interceptor unificado de errores comerciales.
+2. Capa de Dominio (Aislada por Módulo): Define los objetos de negocio principales
+(Usuario, Clase, Registro) junto con sus validaciones e invariantes.
+3. Capa de Persistencia (Aislada por Módulo): Aloja las interfaces que gestionan las
+consultas de lectura y escritura hacia MySQL.
+4. Capa de Servicios (Aislada por Módulo): Implementa la lógica y los casos de uso
+específicos (ej. 'Procesar ingreso físico e iniciar alerta').
+5. Capa Web / Controladores (Aislada por Módulo): Expone los puntos de contacto
+REST estructurados en formato JSON para Angular y Flutter.
+
+5. Diseño Conceptual de la Base de Datos (Diccionario de Datos)
+Sustituyendo los scripts de código tradicionales, se describe la estructura de
+persistencia lógica en MySQL bajo una estrategia Multi-Inquilino (Row-level
+Multitenancy), vinculada por un identificador único por institución educativa:
+
+Entidad: Institución / Tenant
+Atributo Lógico
+
+Tipo de Dato
+
+ID Institución
+
+Numérico Único
+
+Nombre Institución
+
+Texto Corto
+
+Dominio Personalizado
+
+Texto Alternativo
+
+Logo Institucional
+
+Texto Largo
+
+Descripción / Regla de
+Negocio
+Identificador principal del
+inquilino (Clave Primaria).
+Razón social de la entidad
+educativa.
+URL de acceso de marca
+blanca (ej.
+colegio.plataforma.com).
+Enlace al almacenamiento en
+la nube con la gráfica visual
+corporativa.
+
+Entidades: Usuarios y Roles
+Atributo Lógico
+
+Tipo de Dato
+
+ID Usuario
+
+Numérico Único
+
+ID Institución
+
+Relación Lógica
+
+Rol Asignado
+
+Lista Restringida
+
+Descripción / Regla de
+Negocio
+Identificador del usuario del
+sistema (Clave Primaria).
+Clave foránea que restringe
+al usuario a una institución
+específica.
+Valores permitidos: ADMIN,
+
+Credenciales de Acceso
+
+Texto Protegido
+
+Datos de Identidad
+
+Texto Estándar
+
+PROFESOR, ESTUDIANTE,
+PADRE.
+Almacena de forma segura el
+usuario, correo y contraseñas
+hash.
+Nombres, apellidos y estatus
+activo/inactivo.
+
+Entidad: Horarios y Asignaturas
+Atributo Lógico
+
+Tipo de Dato
+
+ID Horario
+
+Numérico Único
+
+Profesor Encargado
+
+Relación Lógica
+
+Nombre de Asignatura
+
+Texto Corto
+
+Ventana Temporal
+
+Fecha y Hora
+
+Estado Operativo
+
+Lista Restringida
+
+Descripción / Regla de
+Negocio
+Identificador de la sesión de
+clases (Clave Primaria).
+Clave foránea vinculada al
+usuario con rol de Profesor.
+Título de la materia
+académica dictada.
+Establece los momentos de
+inicio y fin de la lección.
+Define si la clase está:
+ACTIVA, CANCELADA, u
+HORA_LIBRE.
+
+Entidad: Control de Asistencia
+Atributo Lógico
+
+Tipo de Dato
+
+ID Asistencia
+
+Numérico Único
+
+Sesión Académica
+
+Relación Lógica
+
+Estudiante Evaluado
+
+Relación Lógica
+
+Condición
+
+Lista Restringida
+
+Notas del Docente
+
+Texto Libre
+
+Descripción / Regla de
+Negocio
+Clave primaria del registro
+diario.
+Clave foránea que conecta
+directamente con la tabla
+Horarios.
+Clave foránea vinculada al
+usuario con rol de Estudiante.
+Valores obligatorios:
+PRESENTE, AUSENTE,
+RETARDO, JUSTIFICADO.
+Anotaciones o justificaciones
+ingresadas por el profesor.
+
+Entidad: Registro de Hardware (Pases de Puerta)
+Atributo Lógico
+
+Tipo de Dato
+
+ID Transacción
+
+Numérico Único
+
+ID del Dispositivo
+
+Texto Corto
+
+Descripción / Regla de
+Negocio
+Clave primaria que
+documenta el evento físico.
+Código identificador único del
+
+Usuario Identificado
+
+Relación Lógica
+
+Dirección de Flujo
+
+Lista Restringida
+
+Estampa de Tiempo
+
+Fecha y Hora
+
+torniquete o lector de tarjetas.
+Clave foránea que mapea la
+huella/tarjeta con el usuario.
+Clave de estado que indica si
+es ENTRADA o SALIDA.
+Cronología precisa del evento
+generada por el hardware.
+
+6. Fases de Creación del Producto y Pasos Técnicos Detallados
+A continuación se establece la hoja de ruta de ingeniería detallada paso a paso para la
+construcción del backend del MVP. Cada fase define los objetivos, las tareas de
+configuración, la lógica interna y las actividades de validación sin código de
+programación.
+
+Fase 1: Inicialización de Infraestructura, Base de Datos y Módulo
+Tenant (Semanas 1-2)
+• Paso 1.1: Configuración del Proyecto Base.
+Inicialización del esqueleto del monolito modular utilizando Spring Boot 3.x y Java 17.
+Configuración de los archivos de propiedades del sistema para entornos segregados
+(Desarrollo y Producción). Establecimiento del sistema de gestión de dependencias del
+proyecto.
+• Paso 1.2: Aprovisionamiento de Persistencia en MySQL.
+Instalación y endurecimiento del servidor de base de datos MySQL. Configuración de
+los grupos de usuarios y credenciales de acceso para la aplicación. Creación física de
+las tablas del diccionario de datos y establecimiento manual de los índices relacionales
+y restricciones de clave externa (Foreign Keys) para asegurar integridad referencial.
+• Paso 1.3: Arquitectura Multi-Inquilino (Tenant Module).
+Modelado conceptual de las reglas de aislamiento por institución. Configuración de
+interceptores lógicos que capturan la cabecera del Tenant en cada llamada entrante de
+las aplicaciones Angular o Flutter, garantizando que ninguna consulta filtre datos de una
+institución ajena.
+• Paso 1.4: Validación de la Fase.
+Ejecución de pruebas de estrés sobre las conexiones del motor relacional y
+verificación del aislamiento lógico inyectando datos simulados de dos instituciones
+educativas diferentes.
+
+Fase 2: Autenticación, Seguridad Transversal y Gestión de Roles
+(Semanas 3-4)
+• Paso 2.1: Implementación de la Capa de Seguridad (Security Module).
+Configuración de Spring Security para denegar por defecto el acceso a todos los
+puntos de entrada (endpoints) de la plataforma, forzando la validación explícita.
+• Paso 2.2: Motor de Ciclo de Vida de Tokens JWT.
+
+Desarrollo conceptual del algoritmo de generación, firma y descifrado de tokens
+criptográficos JSON Web Tokens (JWT). Configuración de un filtro interceptor que
+extrae el token del encabezado de la petición, valida su vigencia y firma, e inyecta la
+identidad del usuario en el contexto seguro de ejecución.
+• Paso 2.3: Configuración del Control de Accesos Basado en Roles (RBAC).
+Mapeo lógico de las jerarquías de permisos. Programación de reglas estrictas: las
+rutas del portal de administración de Angular quedan restringidas a ADMIN y
+PROFESOR, mientras que los accesos móviles de Flutter se abren a ESTUDIANTE y
+PADRE.
+• Paso 2.4: Validación de la Fase.
+Pruebas de denegación de acceso (HTTP 401 Unauthorized y 403 Forbidden)
+mediante llamadas simuladas con tokens expirados, falsificados o con roles
+insuficientes.
+
+Fase 3: Servicio de Horarios y Gestión Académica (Semanas 5-6)
+• Paso 3.1: Modelado de Negocio de Horarios (`schedule-module`).
+Creación de los servicios encargados de gestionar las agendas institucionales. Lógica
+de asignación de bloques horarios evitando colisiones (un profesor o un aula no pueden
+estar en dos registros concurrentes en la misma ventana de tiempo).
+• Paso 3.2: Lógica de Modificación en Tiempo Real y Cancelaciones.
+Desarrollo de las funciones de negocio para procesar la cancelación de clases por
+parte de los profesores o administradores, mutando automáticamente el estado del
+horario a 'CANCELLED' o 'FREE_HOUR'.
+• Paso 3.3: Exposición de Endpoints REST Academicos.
+Estructuración de las interfaces de salida JSON. Diseño de endpoints de lectura
+optimizados para que el frontend Angular muestre la cuadrícula administrativa y la app
+Flutter renderice el calendario diario del alumno.
+• Paso 3.4: Validación de la Fase.
+Simulación de conflictos de agenda (inserciones duplicadas en la misma hora) para
+verificar que el sistema dispare excepciones de negocio controladas y bloquee el error.
+
+Fase 4: Servicio de Control de Asistencia Estudiantil (Semana 7)
+• Paso 4.1: Construcción del Núcleo de Asistencia (`attendance-module`).
+Desarrollo de los servicios para capturar el estado presencial diario de los alumnos. El
+sistema acopla de manera obligatoria cada inserción de asistencia con un ID de Horario
+válido del día en curso.
+• Paso 4.2: Reglas de Negocio para Modificaciones Posteriores.
+Programación de la lógica de negocio que permite a los profesores alterar un registro
+de 'AUSENTE' a 'JUSTIFICADO' o 'RETARDO' tras recibir la documentación física del
+representante, guardando una auditoría en la columna de observaciones.
+• Paso 4.3: Validaciones de Integridad.
+Restricción a nivel de servicio para asegurar que un profesor solo pueda pasar
+asistencia a los estudiantes inscritos en su asignatura y dentro de las fechas
+correspondientes del período escolar.
+
+• Paso 4.4: Validación de la Fase.
+Pruebas de consistencia de datos asegurando que la eliminación o reprogramación de
+un horario mantenga la integridad histórica de las asistencias pasadas mediante llaves
+foráneas controladas.
+
+Fase 5: Integración de Hardware y Bus de Notificaciones Externas
+(Semanas 8-9)
+• Paso 5.1: Módulo de Captura de Eventos Físicos (`access-control-module`).
+Desarrollo de endpoints REST específicos de alta velocidad diseñados para interactuar
+con los controladores lógicos de los torniquetes físicos. Estos endpoints reciben cargas
+útiles mínimas (ID de tarjeta/código de barras, ID del dispositivo, timestamp).
+• Paso 5.2: Motor de Sincronización y Validación de Entrada/Salida.
+Lógica de negocio que recibe el código escaneado en el torniquete, consulta el estatus
+del usuario en la base de datos principal de MySQL y aprueba o rechaza el acceso
+físico, registrando instantáneamente el log de entrada o salida.
+• Paso 5.3: Integración del Bus de Notificaciones (`notification-module`).
+Creación de adaptadores conceptuales de salida. Configuración del conector SMTP
+empresarial para despachar correos automatizados. Modelado de las llamadas salientes
+por protocolo HTTP hacia la API de WhatsApp Business de Meta.
+• Paso 5.4: Orquestación del Flujo 'Paso-Notificación'.
+Programación del disparador de eventos: en el momento en que el torniquete registra
+un log de 'ENTRADA' exitoso para un Estudiante, el sistema busca en la tabla de
+relaciones a sus Padres asociados y encola una petición de mensaje automática a
+WhatsApp informando la hora exacta de ingreso a la institución.
+• Paso 5.5: Validación de la Fase.
+Pruebas de carga simulando la llegada masiva de solicitudes simultáneas desde 10
+torniquetes en hora pico, verificando que el encolamiento de mensajes a WhatsApp no
+congele la base de datos relacional transaccional.
+
+Fase 6: Auditoría de Seguridad, Pruebas de Sistema y Despliegue en
+Producción (Semana 10)
+• Paso 6.1: Auditoría de Seguridad Transversal.
+Verificación del cumplimiento de las políticas OWASP. Revisión exhaustiva del manejo
+de contraseñas mediante hashing, protección contra inyecciones SQL en la capa JPA y
+validación de tokens JWT en el API Gateway.
+• Paso 6.2: Pruebas de Integración de Extremo a Extremo (End-to-End).
+Conexión completa del flujo del ecosistema: llamada desde Angular para crear un
+horario -> simulación de escaneo de torniquete -> validación del controlador ->
+alteración de asistencia -> despacho de correo SMTP y mensaje a WhatsApp Business.
+• Paso 6.3: Preparación del Entorno de Producción.
+Configuración final de los índices de MySQL y puesta a punto de los parámetros del
+servidor para soportar la concurrencia real estimada de la institución.
+• Paso 6.4: Lanzamiento Oficial del MVP.
+
+Despliegue de la unidad monolítica modular, apertura de los puertos de red
+controlados para la comunicación exclusiva del hardware y enganche oficial con los
+frontends definitivos.
+
+7. Consideraciones Críticas de Integración
+1. Sincronización de Hardware: Los equipos físicos (torniquetes) deberán enviar
+llamadas REST (Webhooks) hacia el módulo de 'Control de Acceso' informando el
+código escaneado. Esta información cruza de inmediato con la Base de Datos para
+verificar membresía vigente.
+2. Seguridad de Notificaciones: La integración con WhatsApp Business requerirá tokens
+de autorización comercial por parte de Meta, los cuales deben rotar periódicamente.
+Toda comunicación se canalizará a través del 'Notification Module' para no saturar las
+operaciones transaccionales.
+3. Privacidad de Estudiantes: Los padres y representantes estarán vinculados
+lógicamente (Base de Datos) mediante una tabla relacional 'Padre-Estudiante'. Las
+reglas de autorización dentro del módulo JWT verificarán que un usuario con el rol
+PADRE únicamente pueda extraer las notas y los pases por torniquete que coincidan
+con la identidad de su(s) hijo(s).
+
+
