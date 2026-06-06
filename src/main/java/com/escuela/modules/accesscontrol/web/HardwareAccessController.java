@@ -18,19 +18,36 @@ public class HardwareAccessController {
     @Autowired
     private AccessControlService accessControlService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private com.escuela.modules.tenant.domain.TenantRepository tenantRepository;
+
     @PostMapping("/access")
     public ResponseEntity<?> recordAccess(@RequestBody HardwareAccessRequest request) {
+        if (request.getUserId() == null) {
+            return ResponseEntity.badRequest().body("User ID is required.");
+        }
+
         AccessLog log = new AccessLog();
         log.setDeviceId(request.getDeviceId());
         log.setDirection(request.getDirection());
         log.setEventTimestamp(request.getTimestamp() != null ? request.getTimestamp() : LocalDateTime.now());
 
-        User user = new User();
-        user.setId(request.getUserId());
+        // Fetch managed User
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + request.getUserId()));
         log.setUser(user);
 
-        Tenant tenant = new Tenant();
-        tenant.setId(TenantContext.getCurrentTenant());
+        // Fetch managed Tenant
+        Long tenantId = TenantContext.getCurrentTenant();
+        if (tenantId == null) {
+            return ResponseEntity.badRequest().body("X-Tenant-ID header is missing or invalid.");
+        }
+        
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new RuntimeException("Tenant not found with ID: " + tenantId));
         log.setTenant(tenant);
 
         try {
