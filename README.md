@@ -121,10 +121,50 @@ La base de datos MySQL estará en `localhost:3307`.
 ### Sin Docker (desarrollo local)
 
 ```bash
-# Requiere MySQL corriendo en localhost:3306
-
+# Requiere MySQL corriendo en localhost:3307 (o cambiar en application.properties)
 ./mvnw spring-boot:run
 ```
+
+---
+
+## Guía de Inicio Rápido con Postman
+
+Para probar la API, puedes usar Postman siguiendo estos pasos:
+
+### 1. Configuración de Cabeceras (Headers)
+Todas las peticiones (excepto las de `/api/test/**`) **deben** incluir estas cabeceras:
+
+| Key | Value | Descripción |
+| :--- | :--- | :--- |
+| `X-Tenant-ID` | `1` | ID de la institución (ej. Colegio del Norte) |
+| `Content-Type` | `application/json` | Necesario para peticiones POST/PATCH |
+
+### 2. Flujo de Autenticación (Login)
+La mayoría de las rutas están protegidas. Primero debes obtener un token:
+
+1. **Endpoint:** `POST http://localhost:8080/api/auth/login`
+2. **Cuerpo (JSON):**
+   ```json
+   {
+     "username": "admin_norte",
+     "password": "admin123"
+   }
+   ```
+3. **Uso del Token:** Copia el valor de `token` de la respuesta. En Postman, ve a la pestaña **Auth**, selecciona **Bearer Token** y pega el código allí.
+
+### 3. Endpoints Principales para Probar
+
+#### Simulación de Hardware (Público)
+Simula el paso de un estudiante por un torniquete físico:
+* **POST** `/api/hardware/access`
+* **Body:** `{"deviceId": "TORN_01", "userId": 3, "direction": "ENTRADA"}`
+
+#### Gestión de Horarios (Admin/Profesor)
+* **GET** `/api/admin/schedules` — Lista todos los horarios del tenant.
+
+#### Registro de Asistencia (Admin/Profesor)
+* **POST** `/api/admin/attendance`
+* **Body:** `{"scheduleId": 1, "studentId": 3, "status": "PRESENTE", "notes": "Llegó puntual"}`
 
 ---
 
